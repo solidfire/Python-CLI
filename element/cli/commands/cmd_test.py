@@ -24,7 +24,33 @@ from solidfire import common
 @click.group()
 @pass_context
 def cli(ctx):
-    """ping connectmvip list connectensemble connectsvip listutilities """
+    """list ping connectmvip listutilities connectensemble connectsvip """
+
+@cli.command('list', short_help="""The ListTests API method is used to return the tests that are available to run on a node. Note: This method is available only through the per-node API endpoint 5.0 or later. """)
+@pass_context
+def list(ctx):
+    """The ListTests API method is used to return the tests that are available to run on a node."""
+    """Note: This method is available only through the per-node API endpoint 5.0 or later."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("")
+    try:
+        _ListTestsResult = ctx.element.list_tests()
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_ListTestsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
 
 @cli.command('ping', short_help="""The TestPing API method is used to validate the connection to all nodes in the cluster on both 1G and 10G interfaces using ICMP packets. The test uses the appropriate MTU sizes for each packet based on the MTU settings in the network configuration. Note: This method is available only through the per-node API endpoint 5.0 or later. """)
 @click.option('--attempts',
@@ -61,6 +87,7 @@ def ping(ctx,
          exit()
 
 
+    
 
     ctx.logger.info("""attempts = """+str(attempts)+""";"""+"""hosts = """+str(hosts)+""";"""+"""totaltimeoutsec = """+str(totaltimeoutsec)+""";"""+"""packetsize = """+str(packetsize)+""";"""+"""pingtimeoutmsec = """+str(pingtimeoutmsec)+""";"""+"")
     try:
@@ -91,6 +118,7 @@ def connectmvip(ctx,
          exit()
 
 
+    
 
     ctx.logger.info("""mvip = """+str(mvip)+""";"""+"")
     try:
@@ -106,20 +134,21 @@ def connectmvip(ctx,
 
 
 
-@cli.command('list', short_help="""The ListTests API method is used to return the tests that are available to run on a node. Note: This method is available only through the per-node API endpoint 5.0 or later. """)
+@cli.command('listutilities', short_help="""The ListUtilities API method is used to return the tests that are available to run on a node. Note: This method is available only through the per-node API endpoint 5.0 or later. """)
 @pass_context
-def list(ctx):
-    """The ListTests API method is used to return the tests that are available to run on a node."""
+def listutilities(ctx):
+    """The ListUtilities API method is used to return the tests that are available to run on a node."""
     """Note: This method is available only through the per-node API endpoint 5.0 or later."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
     ctx.logger.info("")
     try:
-        _ListTestsResult = ctx.element.list_tests()
+        _ListUtilitiesResult = ctx.element.list_utilities()
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -127,7 +156,7 @@ def list(ctx):
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_ListTestsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_ListUtilitiesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -146,6 +175,7 @@ def connectensemble(ctx,
          exit()
 
 
+    
 
     ctx.logger.info("""ensemble = """+str(ensemble)+""";"""+"")
     try:
@@ -176,6 +206,7 @@ def connectsvip(ctx,
          exit()
 
 
+    
 
     ctx.logger.info("""svip = """+str(svip)+""";"""+"")
     try:
@@ -188,29 +219,4 @@ def connectsvip(ctx,
         exit()
 
     cli_utils.print_result(_TestConnectSvipResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('listutilities', short_help="""The ListUtilities API method is used to return the tests that are available to run on a node. Note: This method is available only through the per-node API endpoint 5.0 or later. """)
-@pass_context
-def listutilities(ctx):
-    """The ListUtilities API method is used to return the tests that are available to run on a node."""
-    """Note: This method is available only through the per-node API endpoint 5.0 or later."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _ListUtilitiesResult = ctx.element.list_utilities()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListUtilitiesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 

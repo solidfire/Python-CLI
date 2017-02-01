@@ -24,36 +24,28 @@ from solidfire import common
 @click.group()
 @pass_context
 def cli(ctx):
-    """listforaccount clone updatebulkstatus getstats startbulkread create getcount purgedeleted copy liststatsbyaccessgroup cancelgroupclone startbulkwrite liststatsby modify cancelclone liststatsbyaccount getefficiency list restoredeleted listbulkjobs listasyncresults getasyncresult clonemultiple listactive delete getdefaultqos listdeleted setdefaultqos """
+    """getefficiency liststatsbyaccount startbulkwrite updatebulkstatus startbulkread listdeleted purgedeleted liststatsby create cancelclone getdefaultqos getasyncresult listasyncresults liststatsbyaccessgroup listbulkjobs clone modify restoredeleted copy listactive list clonemultiple setdefaultqos getstats listforaccount getcount cancelgroupclone delete """
 
-@cli.command('listforaccount', short_help="""ListVolumesForAccount returns the list of active AND (pending) deleted volumes for an account. """)
-@click.option('--accountid',
+@cli.command('getefficiency', short_help="""GetVolumeEfficiency is used to retrieve information about a volume. Only the volume given as a parameter in this API method is used to compute the capacity. """)
+@click.option('--volumeid',
               type=int,
               required=True,
-              help="""The ID of the account to list the volumes for. """)
-@click.option('--startvolumeid',
-              type=int,
-              required=False,
-              help="""The ID of the first volume to list. This can be useful for paging results. By default, this starts at the lowest VolumeID. """)
-@click.option('--limit',
-              type=int,
-              required=False,
-              help="""The maximum number of volumes to return from the API. """)
+              help="""Specifies the volume for which capacity is computed. """)
 @pass_context
-def listforaccount(ctx,
-           accountid,
-           startvolumeid = None,
-           limit = None):
-    """ListVolumesForAccount returns the list of active AND (pending) deleted volumes for an account."""
+def getefficiency(ctx,
+           volumeid):
+    """GetVolumeEfficiency is used to retrieve information about a volume."""
+    """Only the volume given as a parameter in this API method is used to compute the capacity."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
-    ctx.logger.info("""accountid = """+str(accountid)+""";"""+"""startvolumeid = """+str(startvolumeid)+""";"""+"""limit = """+str(limit)+""";"""+"")
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
     try:
-        _ListVolumesForAccountResult = ctx.element.list_volumes_for_account(account_id=accountid, start_volume_id=startvolumeid, limit=limit)
+        _GetVolumeEfficiencyResult = ctx.element.get_volume_efficiency(volume_id=volumeid)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -61,58 +53,69 @@ def listforaccount(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_ListVolumesForAccountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_GetVolumeEfficiencyResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
-@cli.command('clone', short_help="""CloneVolume is used to create a copy of the volume. This method is asynchronous and may take a variable amount of time to complete. The cloning process begins immediately when the CloneVolume request is made and is representative of the state of the volume when the API method is issued. GetAsyncResults can be used to determine when the cloning process is complete and the new volume is available for connections. ListSyncJobs can be used to see the progress of creating the clone.  Note: The initial attributes and quality of service settings for the volume are inherited from the volume being cloned. If different settings are required, they can be changed via ModifyVolume.  Note: Cloned volumes do not inherit volume access group memberships from the source volume. """)
+@cli.command('liststatsbyaccount', short_help="""ListVolumeStatsByAccount returns high-level activity measurements for every account. Values are summed from all the volumes owned by the account. """)
+@pass_context
+def liststatsbyaccount(ctx):
+    """ListVolumeStatsByAccount returns high-level activity measurements for every account."""
+    """Values are summed from all the volumes owned by the account."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("")
+    try:
+        _ListVolumeStatsByAccountResult = ctx.element.list_volume_stats_by_account()
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_ListVolumeStatsByAccountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('startbulkwrite', short_help="""StartBulkVolumeWrite allows you to initialize a bulk volume write session on a specified volume. Only two bulk volume processes can run simultaneously on a volume. When the session is initialized, data can be written to a SolidFire storage volume from an external backup source. The external data is accessed by a web server running on a SolidFire node. Communications and server interaction information for external data access is passed by a script running on the SolidFire storage system. """)
 @click.option('--volumeid',
               type=int,
               required=True,
-              help="""The ID of the volume to clone. """)
-@click.option('--name',
+              help="""ID of the volume to be written to. """)
+@click.option('--format',
               type=str,
               required=True,
-              help="""The name for the newly-created volume. """)
-@click.option('--newaccountid',
-              type=int,
-              required=False,
-              help="""AccountID for the owner of the new volume. If unspecified, the AccountID of the owner of the volume being cloned is used. """)
-@click.option('--newsize',
-              type=int,
-              required=False,
-              help="""New size of the volume, in bytes. May be greater or less than the size of the volume being cloned. If unspecified, the clone's volume size will be the same as the source volume. Size is rounded up to the nearest 1 MiB. """)
-@click.option('--access',
+              help="""The format of the volume data. Can be either: uncompressed: every byte of the volume is returned without any compression. native: opaque data is returned that is smaller and more efficiently stored and written on a subsequent bulk volume write """)
+@click.option('--script',
               type=str,
               required=False,
-              help="""Access settings for the new volume. readOnly: Only read operations are allowed. readWrite: Reads and writes are allowed. locked: No reads or writes are allowed. replicationTarget: Identify a volume as the target volume for a paired set of volumes. If the volume is not paired, the access status is locked.  If unspecified, the access settings of the clone will be the same as the source. """)
-@click.option('--snapshotid',
-              type=int,
+              help="""Executable name of a script. If no script name is given then the key and URL are necessary to access SolidFire nodes. The script runs on the primary node and the key and URL is returned to the script so the local web server can be contacted. """)
+@click.option('--scriptparameters',
+              type=str,
               required=False,
-              help="""ID of the snapshot to use as the source of the clone. If unspecified, the clone will be created with a snapshot of the active volume. """)
+              help="""JSON parameters to pass to the script. """)
 @click.option('--attributes',
               type=str,
               required=False,
-              help="""Provide in json format: List of Name/Value pairs in JSON object format. """)
+              help="""Provide in json format: JSON attributes for the bulk volume job. """)
 @pass_context
-def clone(ctx,
+def startbulkwrite(ctx,
            volumeid,
-           name,
-           newaccountid = None,
-           newsize = None,
-           access = None,
-           snapshotid = None,
+           format,
+           script = None,
+           scriptparameters = None,
            attributes = None):
-    """CloneVolume is used to create a copy of the volume."""
-    """This method is asynchronous and may take a variable amount of time to complete."""
-    """The cloning process begins immediately when the CloneVolume request is made and is representative of the state of the volume when the API method is issued."""
-    """GetAsyncResults can be used to determine when the cloning process is complete and the new volume is available for connections."""
-    """ListSyncJobs can be used to see the progress of creating the clone."""
-    """"""
-    """Note: The initial attributes and quality of service settings for the volume are inherited from the volume being cloned."""
-    """If different settings are required, they can be changed via ModifyVolume."""
-    """"""
-    """Note: Cloned volumes do not inherit volume access group memberships from the source volume."""
+    """StartBulkVolumeWrite allows you to initialize a bulk volume write session on a specified volume."""
+    """Only two bulk volume processes can run simultaneously on a volume."""
+    """When the session is initialized, data can be written to a SolidFire storage volume from an external backup source."""
+    """The external data is accessed by a web server running on a SolidFire node."""
+    """Communications and server interaction information for external data access is passed by a script running on the SolidFire storage system."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
@@ -123,12 +126,13 @@ def clone(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""name = """+str(name)+""";"""+"""newaccountid = """+str(newaccountid)+""";"""+"""newsize = """+str(newsize)+""";"""+"""access = """+str(access)+""";"""+"""snapshotid = """+str(snapshotid)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""format = """+str(format)+""";"""+"""script = """+str(script)+""";"""+"""scriptparameters = """+str(scriptparameters)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
-        _CloneVolumeResult = ctx.element.clone_volume(volume_id=volumeid, name=name, new_account_id=newaccountid, new_size=newsize, access=access, snapshot_id=snapshotid, attributes=attributes)
+        _StartBulkVolumeWriteResult = ctx.element.start_bulk_volume_write(volume_id=volumeid, format=format, script=script, script_parameters=scriptparameters, attributes=attributes)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -136,7 +140,7 @@ def clone(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_CloneVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_StartBulkVolumeWriteResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -179,8 +183,9 @@ def updatebulkstatus(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
     ctx.logger.info("""key = """+str(key)+""";"""+"""status = """+str(status)+""";"""+"""percentcomplete = """+str(percentcomplete)+""";"""+"""message = """+str(message)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
@@ -193,36 +198,6 @@ def updatebulkstatus(ctx,
         exit()
 
     cli_utils.print_result(_UpdateBulkVolumeStatusResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('getstats', short_help="""GetVolumeStats is used to retrieve high-level activity measurements for a single volume. Values are cumulative from the creation of the volume. """)
-@click.option('--volumeid',
-              type=int,
-              required=True,
-              help="""Specifies the volume for which statistics is gathered. """)
-@pass_context
-def getstats(ctx,
-           volumeid):
-    """GetVolumeStats is used to retrieve high-level activity measurements for a single volume."""
-    """Values are cumulative from the creation of the volume."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
-    try:
-        _GetVolumeStatsResult = ctx.element.get_volume_stats(volume_id=volumeid)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_GetVolumeStatsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -282,8 +257,9 @@ def startbulkread(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
     ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""format = """+str(format)+""";"""+"""snapshotid = """+str(snapshotid)+""";"""+"""script = """+str(script)+""";"""+"""scriptparameters = """+str(scriptparameters)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
@@ -296,6 +272,89 @@ def startbulkread(ctx,
         exit()
 
     cli_utils.print_result(_StartBulkVolumeReadResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('listdeleted', short_help="""ListDeletedVolumes is used to return the entire list of volumes that have been marked for deletion and is purged from the system. """)
+@pass_context
+def listdeleted(ctx):
+    """ListDeletedVolumes is used to return the entire list of volumes that have been marked for deletion and is purged from the system."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("")
+    try:
+        _ListDeletedVolumesResult = ctx.element.list_deleted_volumes()
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_ListDeletedVolumesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('purgedeleted', short_help="""PurgeDeletedVolume immediately and permanently purges a volume which has been deleted. A volume must be deleted using DeleteVolume before it can be purged. Volumes are purged automatically after a period of time, so usage of this method is not typically required. """)
+@click.option('--volumeid',
+              type=int,
+              required=True,
+              help="""The ID of the volume to purge. """)
+@pass_context
+def purgedeleted(ctx,
+           volumeid):
+    """PurgeDeletedVolume immediately and permanently purges a volume which has been deleted."""
+    """A volume must be deleted using DeleteVolume before it can be purged."""
+    """Volumes are purged automatically after a period of time, so usage of this method is not typically required."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
+    try:
+        _PurgeDeletedVolumeResult = ctx.element.purge_deleted_volume(volume_id=volumeid)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_PurgeDeletedVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('liststatsby', short_help="""ListVolumeStatsByVolume returns high-level activity measurements for every volume, by volume. Values are cumulative from the creation of the volume. """)
+@pass_context
+def liststatsby(ctx):
+    """ListVolumeStatsByVolume returns high-level activity measurements for every volume, by volume."""
+    """Values are cumulative from the creation of the volume."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("")
+    try:
+        _ListVolumeStatsByVolumeResult = ctx.element.list_volume_stats_by_volume()
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_ListVolumeStatsByVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -369,8 +428,9 @@ def create(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
     ctx.logger.info("""name = """+str(name)+""";"""+"""accountid = """+str(accountid)+""";"""+"""totalsize = """+str(totalsize)+""";"""+"""enable512e = """+str(enable512e)+""";"""+"""qos = """+str(qos)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
@@ -386,19 +446,50 @@ def create(ctx,
 
 
 
-@cli.command('getcount', short_help="""GetVolumeCount enables you to retrieve the number of volumes currently in the system. """)
+@cli.command('cancelclone', short_help="""Cancels a currently running clone operation. This method does not return anything. """)
+@click.option('--cloneid',
+              type=int,
+              required=True,
+              help="""""")
 @pass_context
-def getcount(ctx):
-    """GetVolumeCount enables you to retrieve the number of volumes currently in the system."""
+def cancelclone(ctx,
+           cloneid):
+    """Cancels a currently running clone operation. This method does not return anything."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
+
+    ctx.logger.info("""cloneid = """+str(cloneid)+""";"""+"")
+    try:
+        _CancelCloneResult = ctx.element.cancel_clone(clone_id=cloneid)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_CancelCloneResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('getdefaultqos', short_help="""GetDefaultQoS is used to retrieve the default QoS values that are set for a volume if QoS is not supplied. """)
+@pass_context
+def getdefaultqos(ctx):
+    """GetDefaultQoS is used to retrieve the default QoS values that are set for a volume if QoS is not supplied."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
 
     ctx.logger.info("")
     try:
-        _GetVolumeCountResult = ctx.element.get_volume_count()
+        _VolumeQOS = ctx.element.get_default_qos()
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -406,30 +497,37 @@ def getcount(ctx):
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_GetVolumeCountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_VolumeQOS, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
-@cli.command('purgedeleted', short_help="""PurgeDeletedVolume immediately and permanently purges a volume which has been deleted. A volume must be deleted using DeleteVolume before it can be purged. Volumes are purged automatically after a period of time, so usage of this method is not typically required. """)
-@click.option('--volumeid',
+@cli.command('getasyncresult', short_help="""Used to retrieve the result of asynchronous method calls. Some method calls are long running and do not complete when the initial response is sent. To obtain the result of the method call, polling with GetAsyncResult is required.  GetAsyncResult returns the overall status of the operation (in progress, completed, or error) in a standard fashion, but the actual data returned for the operation depends on the original method call and the return data is documented with each method.  The result for a completed asynchronous method call can only be retrieved once. Once the final result has been returned, later attempts returns an error. """)
+@click.option('--asynchandle',
               type=int,
               required=True,
-              help="""The ID of the volume to purge. """)
+              help="""A value that was returned from the original asynchronous method call. """)
 @pass_context
-def purgedeleted(ctx,
-           volumeid):
-    """PurgeDeletedVolume immediately and permanently purges a volume which has been deleted."""
-    """A volume must be deleted using DeleteVolume before it can be purged."""
-    """Volumes are purged automatically after a period of time, so usage of this method is not typically required."""
+def getasyncresult(ctx,
+           asynchandle):
+    """Used to retrieve the result of asynchronous method calls."""
+    """Some method calls are long running and do not complete when the initial response is sent."""
+    """To obtain the result of the method call, polling with GetAsyncResult is required."""
+    """"""
+    """GetAsyncResult returns the overall status of the operation (in progress, completed, or error) in a standard fashion,"""
+    """but the actual data returned for the operation depends on the original method call and the return data is documented with each method."""
+    """"""
+    """The result for a completed asynchronous method call can only be retrieved once."""
+    """Once the final result has been returned, later attempts returns an error."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
+    ctx.logger.info("""asynchandle = """+str(asynchandle)+""";"""+"")
     try:
-        _PurgeDeletedVolumeResult = ctx.element.purge_deleted_volume(volume_id=volumeid)
+        _GetAsyncResultResult = ctx.element.get_async_result(async_handle=asynchandle)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -437,38 +535,31 @@ def purgedeleted(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_PurgeDeletedVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_GetAsyncResultResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
-@cli.command('copy', short_help="""Copies one volume to another. """)
-@click.option('--volumeid',
-              type=int,
-              required=True,
-              help="""Source volume to copy. """)
-@click.option('--dstvolumeid',
-              type=int,
-              required=True,
-              help="""Destination volume for the copy. """)
-@click.option('--snapshotid',
-              type=int,
+@cli.command('listasyncresults', short_help="""You can use ListAsyncResults to list the results of all currently running and completed asynchronous methods on the system. Querying asynchronous results with ListAsyncResults does not cause completed asyncHandles to expire; you can use GetAsyncResult to query any of the asyncHandles returned by ListAsyncResults. """)
+@click.option('--asyncresulttypes',
+              type=str,
               required=False,
-              help="""Snapshot ID of the source volume to create the copy from. """)
+              help="""An optional list of types of results. You can use this list to restrict the results to only these types of operations. Possible values:BulkVolume: Copy operations between volumes, such as backups or restores.Clone: Volume cloning operations.DriveRemoval: Operations involving the system copying data from a drive in preparation to remove it from the cluster.RtfiPendingNode: Operations involving the system installing compatible software on a node before adding it to the cluster. """)
 @pass_context
-def copy(ctx,
-           volumeid,
-           dstvolumeid,
-           snapshotid = None):
-    """Copies one volume to another."""
+def listasyncresults(ctx,
+           asyncresulttypes = None):
+    """You can use ListAsyncResults to list the results of all currently running and completed asynchronous methods on the system. Querying asynchronous results with ListAsyncResults does not cause completed asyncHandles to expire; you can use GetAsyncResult to query any of the asyncHandles returned by ListAsyncResults."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
 
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""dstvolumeid = """+str(dstvolumeid)+""";"""+"""snapshotid = """+str(snapshotid)+""";"""+"")
+    asyncresulttypes = parser.parse_array(asyncresulttypes)
+    
+
+    ctx.logger.info("""asyncresulttypes = """+str(asyncresulttypes)+""";"""+"")
     try:
-        _CopyVolumeResult = ctx.element.copy_volume(volume_id=volumeid, dst_volume_id=dstvolumeid, snapshot_id=snapshotid)
+        _ListAsyncResultsResult = ctx.element.list_async_results(async_result_types=asyncresulttypes)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -476,7 +567,7 @@ def copy(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_CopyVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_ListAsyncResultsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -496,6 +587,7 @@ def liststatsbyaccessgroup(ctx,
 
 
     volumeaccessgroups = parser.parse_array(volumeaccessgroups)
+    
 
     ctx.logger.info("""volumeaccessgroups = """+str(volumeaccessgroups)+""";"""+"")
     try:
@@ -511,24 +603,20 @@ def liststatsbyaccessgroup(ctx,
 
 
 
-@cli.command('cancelgroupclone', short_help="""CancelGroupClone enables you to stop an ongoing CloneMultipleVolumes process for a group of clones. When you cancel a group clone operation, the system completes and removes the operation's associated asyncHandle. This method does not return anything. """)
-@click.option('--groupcloneid',
-              type=int,
-              required=True,
-              help="""cloneID for the ongoing clone process. """)
+@cli.command('listbulkjobs', short_help="""ListBulkVolumeJobs is used to return information about each bulk volume read or write operation that is occurring in the system. """)
 @pass_context
-def cancelgroupclone(ctx,
-           groupcloneid):
-    """CancelGroupClone enables you to stop an ongoing CloneMultipleVolumes process for a group of clones. When you cancel a group clone operation, the system completes and removes the operation&#x27;s associated asyncHandle. This method does not return anything."""
+def listbulkjobs(ctx):
+    """ListBulkVolumeJobs is used to return information about each bulk volume read or write operation that is occurring in the system."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
-    ctx.logger.info("""groupcloneid = """+str(groupcloneid)+""";"""+"")
+    ctx.logger.info("")
     try:
-        _CancelGroupCloneResult = ctx.element.cancel_group_clone(group_clone_id=groupcloneid)
+        _ListBulkVolumeJobsResult = ctx.element.list_bulk_volume_jobs()
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -536,43 +624,58 @@ def cancelgroupclone(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_CancelGroupCloneResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_ListBulkVolumeJobsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
-@cli.command('startbulkwrite', short_help="""StartBulkVolumeWrite allows you to initialize a bulk volume write session on a specified volume. Only two bulk volume processes can run simultaneously on a volume. When the session is initialized, data can be written to a SolidFire storage volume from an external backup source. The external data is accessed by a web server running on a SolidFire node. Communications and server interaction information for external data access is passed by a script running on the SolidFire storage system. """)
+@cli.command('clone', short_help="""CloneVolume is used to create a copy of the volume. This method is asynchronous and may take a variable amount of time to complete. The cloning process begins immediately when the CloneVolume request is made and is representative of the state of the volume when the API method is issued. GetAsyncResults can be used to determine when the cloning process is complete and the new volume is available for connections. ListSyncJobs can be used to see the progress of creating the clone.  Note: The initial attributes and quality of service settings for the volume are inherited from the volume being cloned. If different settings are required, they can be changed via ModifyVolume.  Note: Cloned volumes do not inherit volume access group memberships from the source volume. """)
 @click.option('--volumeid',
               type=int,
               required=True,
-              help="""ID of the volume to be written to. """)
-@click.option('--format',
+              help="""The ID of the volume to clone. """)
+@click.option('--name',
               type=str,
               required=True,
-              help="""The format of the volume data. Can be either: uncompressed: every byte of the volume is returned without any compression. native: opaque data is returned that is smaller and more efficiently stored and written on a subsequent bulk volume write """)
-@click.option('--script',
+              help="""The name for the newly-created volume. """)
+@click.option('--newaccountid',
+              type=int,
+              required=False,
+              help="""AccountID for the owner of the new volume. If unspecified, the AccountID of the owner of the volume being cloned is used. """)
+@click.option('--newsize',
+              type=int,
+              required=False,
+              help="""New size of the volume, in bytes. May be greater or less than the size of the volume being cloned. If unspecified, the clone's volume size will be the same as the source volume. Size is rounded up to the nearest 1 MiB. """)
+@click.option('--access',
               type=str,
               required=False,
-              help="""Executable name of a script. If no script name is given then the key and URL are necessary to access SolidFire nodes. The script runs on the primary node and the key and URL is returned to the script so the local web server can be contacted. """)
-@click.option('--scriptparameters',
-              type=str,
+              help="""Access settings for the new volume. readOnly: Only read operations are allowed. readWrite: Reads and writes are allowed. locked: No reads or writes are allowed. replicationTarget: Identify a volume as the target volume for a paired set of volumes. If the volume is not paired, the access status is locked.  If unspecified, the access settings of the clone will be the same as the source. """)
+@click.option('--snapshotid',
+              type=int,
               required=False,
-              help="""JSON parameters to pass to the script. """)
+              help="""ID of the snapshot to use as the source of the clone. If unspecified, the clone will be created with a snapshot of the active volume. """)
 @click.option('--attributes',
               type=str,
               required=False,
-              help="""Provide in json format: JSON attributes for the bulk volume job. """)
+              help="""Provide in json format: List of Name/Value pairs in JSON object format. """)
 @pass_context
-def startbulkwrite(ctx,
+def clone(ctx,
            volumeid,
-           format,
-           script = None,
-           scriptparameters = None,
+           name,
+           newaccountid = None,
+           newsize = None,
+           access = None,
+           snapshotid = None,
            attributes = None):
-    """StartBulkVolumeWrite allows you to initialize a bulk volume write session on a specified volume."""
-    """Only two bulk volume processes can run simultaneously on a volume."""
-    """When the session is initialized, data can be written to a SolidFire storage volume from an external backup source."""
-    """The external data is accessed by a web server running on a SolidFire node."""
-    """Communications and server interaction information for external data access is passed by a script running on the SolidFire storage system."""
+    """CloneVolume is used to create a copy of the volume."""
+    """This method is asynchronous and may take a variable amount of time to complete."""
+    """The cloning process begins immediately when the CloneVolume request is made and is representative of the state of the volume when the API method is issued."""
+    """GetAsyncResults can be used to determine when the cloning process is complete and the new volume is available for connections."""
+    """ListSyncJobs can be used to see the progress of creating the clone."""
+    """"""
+    """Note: The initial attributes and quality of service settings for the volume are inherited from the volume being cloned."""
+    """If different settings are required, they can be changed via ModifyVolume."""
+    """"""
+    """Note: Cloned volumes do not inherit volume access group memberships from the source volume."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
@@ -583,12 +686,13 @@ def startbulkwrite(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""format = """+str(format)+""";"""+"""script = """+str(script)+""";"""+"""scriptparameters = """+str(scriptparameters)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""name = """+str(name)+""";"""+"""newaccountid = """+str(newaccountid)+""";"""+"""newsize = """+str(newsize)+""";"""+"""access = """+str(access)+""";"""+"""snapshotid = """+str(snapshotid)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
-        _StartBulkVolumeWriteResult = ctx.element.start_bulk_volume_write(volume_id=volumeid, format=format, script=script, script_parameters=scriptparameters, attributes=attributes)
+        _CloneVolumeResult = ctx.element.clone_volume(volume_id=volumeid, name=name, new_account_id=newaccountid, new_size=newsize, access=access, snapshot_id=snapshotid, attributes=attributes)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -596,32 +700,7 @@ def startbulkwrite(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_StartBulkVolumeWriteResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('liststatsby', short_help="""ListVolumeStatsByVolume returns high-level activity measurements for every volume, by volume. Values are cumulative from the creation of the volume. """)
-@pass_context
-def liststatsby(ctx):
-    """ListVolumeStatsByVolume returns high-level activity measurements for every volume, by volume."""
-    """Values are cumulative from the creation of the volume."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _ListVolumeStatsByVolumeResult = ctx.element.list_volume_stats_by_volume()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListVolumeStatsByVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_CloneVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -702,8 +781,9 @@ def modify(ctx,
             kwargsDict = simplejson.loads(attributes)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         attributes = dict(**kwargsDict)
+    
 
     ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""accountid = """+str(accountid)+""";"""+"""access = """+str(access)+""";"""+"""qos = """+str(qos)+""";"""+"""totalsize = """+str(totalsize)+""";"""+"""attributes = """+str(attributes)+""";"""+"")
     try:
@@ -719,79 +799,26 @@ def modify(ctx,
 
 
 
-@cli.command('cancelclone', short_help="""Cancels a currently running clone operation. This method does not return anything. """)
-@click.option('--cloneid',
-              type=int,
-              required=True,
-              help="""""")
-@pass_context
-def cancelclone(ctx,
-           cloneid):
-    """Cancels a currently running clone operation. This method does not return anything."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("""cloneid = """+str(cloneid)+""";"""+"")
-    try:
-        _CancelCloneResult = ctx.element.cancel_clone(clone_id=cloneid)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_CancelCloneResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('liststatsbyaccount', short_help="""ListVolumeStatsByAccount returns high-level activity measurements for every account. Values are summed from all the volumes owned by the account. """)
-@pass_context
-def liststatsbyaccount(ctx):
-    """ListVolumeStatsByAccount returns high-level activity measurements for every account."""
-    """Values are summed from all the volumes owned by the account."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _ListVolumeStatsByAccountResult = ctx.element.list_volume_stats_by_account()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListVolumeStatsByAccountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('getefficiency', short_help="""GetVolumeEfficiency is used to retrieve information about a volume. Only the volume given as a parameter in this API method is used to compute the capacity. """)
+@cli.command('restoredeleted', short_help="""RestoreDeletedVolume marks a deleted volume as active again. This action makes the volume immediately available for iSCSI connection. """)
 @click.option('--volumeid',
               type=int,
               required=True,
-              help="""Specifies the volume for which capacity is computed. """)
+              help="""VolumeID for the deleted volume to restore. """)
 @pass_context
-def getefficiency(ctx,
+def restoredeleted(ctx,
            volumeid):
-    """GetVolumeEfficiency is used to retrieve information about a volume."""
-    """Only the volume given as a parameter in this API method is used to compute the capacity."""
+    """RestoreDeletedVolume marks a deleted volume as active again."""
+    """This action makes the volume immediately available for iSCSI connection."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
     ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
     try:
-        _GetVolumeEfficiencyResult = ctx.element.get_volume_efficiency(volume_id=volumeid)
+        _RestoreDeletedVolumeResult = ctx.element.restore_deleted_volume(volume_id=volumeid)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -799,7 +826,83 @@ def getefficiency(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_GetVolumeEfficiencyResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_RestoreDeletedVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('copy', short_help="""Copies one volume to another. """)
+@click.option('--volumeid',
+              type=int,
+              required=True,
+              help="""Source volume to copy. """)
+@click.option('--dstvolumeid',
+              type=int,
+              required=True,
+              help="""Destination volume for the copy. """)
+@click.option('--snapshotid',
+              type=int,
+              required=False,
+              help="""Snapshot ID of the source volume to create the copy from. """)
+@pass_context
+def copy(ctx,
+           volumeid,
+           dstvolumeid,
+           snapshotid = None):
+    """Copies one volume to another."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"""dstvolumeid = """+str(dstvolumeid)+""";"""+"""snapshotid = """+str(snapshotid)+""";"""+"")
+    try:
+        _CopyVolumeResult = ctx.element.copy_volume(volume_id=volumeid, dst_volume_id=dstvolumeid, snapshot_id=snapshotid)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_CopyVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('listactive', short_help="""ListActiveVolumes is used to return the list of active volumes currently in the system. The list of volumes is returned sorted in VolumeID order and can be returned in multiple parts (pages). """)
+@click.option('--startvolumeid',
+              type=int,
+              required=False,
+              help="""The ID of the first volume to list. This can be useful for paging results. By default, this starts at the lowest VolumeID. """)
+@click.option('--limit',
+              type=int,
+              required=False,
+              help="""The maximum number of volumes to return from the API. """)
+@pass_context
+def listactive(ctx,
+           startvolumeid = None,
+           limit = None):
+    """ListActiveVolumes is used to return the list of active volumes currently in the system."""
+    """The list of volumes is returned sorted in VolumeID order and can be returned in multiple parts (pages)."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""startvolumeid = """+str(startvolumeid)+""";"""+"""limit = """+str(limit)+""";"""+"")
+    try:
+        _ListActiveVolumesResult = ctx.element.list_active_volumes(start_volume_id=startvolumeid, limit=limit)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_ListActiveVolumesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -847,6 +950,7 @@ def list(ctx,
     accounts = parser.parse_array(accounts)
 
     volumeids = parser.parse_array(volumeids)
+    
 
     ctx.logger.info("""startvolumeid = """+str(startvolumeid)+""";"""+"""limit = """+str(limit)+""";"""+"""volumestatus = """+str(volumestatus)+""";"""+"""accounts = """+str(accounts)+""";"""+"""ispaired = """+str(ispaired)+""";"""+"""volumeids = """+str(volumeids)+""";"""+"")
     try:
@@ -862,153 +966,11 @@ def list(ctx,
 
 
 
-@cli.command('restoredeleted', short_help="""RestoreDeletedVolume marks a deleted volume as active again. This action makes the volume immediately available for iSCSI connection. """)
-@click.option('--volumeid',
-              type=int,
-              required=True,
-              help="""VolumeID for the deleted volume to restore. """)
-@pass_context
-def restoredeleted(ctx,
-           volumeid):
-    """RestoreDeletedVolume marks a deleted volume as active again."""
-    """This action makes the volume immediately available for iSCSI connection."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
-    try:
-        _RestoreDeletedVolumeResult = ctx.element.restore_deleted_volume(volume_id=volumeid)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_RestoreDeletedVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('listbulkjobs', short_help="""ListBulkVolumeJobs is used to return information about each bulk volume read or write operation that is occurring in the system. """)
-@pass_context
-def listbulkjobs(ctx):
-    """ListBulkVolumeJobs is used to return information about each bulk volume read or write operation that is occurring in the system."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _ListBulkVolumeJobsResult = ctx.element.list_bulk_volume_jobs()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListBulkVolumeJobsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('listasyncresults', short_help="""You can use ListAsyncResults to list the results of all currently running and completed asynchronous methods on the system. Querying asynchronous results with ListAsyncResults does not cause completed asyncHandles to expire; you can use GetAsyncResult to query any of the asyncHandles returned by ListAsyncResults. """)
-@click.option('--asyncresulttypes',
-              type=str,
-              required=False,
-              help="""An optional list of types of results. You can use this list to restrict the results to only these types of operations. Possible values:BulkVolume: Copy operations between volumes, such as backups or restores.Clone: Volume cloning operations.DriveRemoval: Operations involving the system copying data from a drive in preparation to remove it from the cluster.RtfiPendingNode: Operations involving the system installing compatible software on a node before adding it to the cluster. """)
-@pass_context
-def listasyncresults(ctx,
-           asyncresulttypes = None):
-    """You can use ListAsyncResults to list the results of all currently running and completed asynchronous methods on the system. Querying asynchronous results with ListAsyncResults does not cause completed asyncHandles to expire; you can use GetAsyncResult to query any of the asyncHandles returned by ListAsyncResults."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    asyncresulttypes = parser.parse_array(asyncresulttypes)
-
-    ctx.logger.info("""asyncresulttypes = """+str(asyncresulttypes)+""";"""+"")
-    try:
-        _ListAsyncResultsResult = ctx.element.list_async_results(async_result_types=asyncresulttypes)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListAsyncResultsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('getasyncresult', short_help="""Used to retrieve the result of asynchronous method calls. Some method calls are long running and do not complete when the initial response is sent. To obtain the result of the method call, polling with GetAsyncResult is required.  GetAsyncResult returns the overall status of the operation (in progress, completed, or error) in a standard fashion, but the actual data returned for the operation depends on the original method call and the return data is documented with each method.  The result for a completed asynchronous method call can only be retrieved once. Once the final result has been returned, later attempts returns an error. """)
-@click.option('--asynchandle',
-              type=int,
-              required=True,
-              help="""A value that was returned from the original asynchronous method call. """)
-@pass_context
-def getasyncresult(ctx,
-           asynchandle):
-    """Used to retrieve the result of asynchronous method calls."""
-    """Some method calls are long running and do not complete when the initial response is sent."""
-    """To obtain the result of the method call, polling with GetAsyncResult is required."""
-    """"""
-    """GetAsyncResult returns the overall status of the operation (in progress, completed, or error) in a standard fashion,"""
-    """but the actual data returned for the operation depends on the original method call and the return data is documented with each method."""
-    """"""
-    """The result for a completed asynchronous method call can only be retrieved once."""
-    """Once the final result has been returned, later attempts returns an error."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("""asynchandle = """+str(asynchandle)+""";"""+"")
-    try:
-        _GetAsyncResultResult = ctx.element.get_async_result(async_handle=asynchandle)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_GetAsyncResultResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
 @cli.command('clonemultiple', short_help="""CloneMultipleVolumes is used to create a clone of a group of specified volumes. A consistent set of characteristics can be assigned to a group of multiple volume when they are cloned together. If groupSnapshotID is going to be used to clone the volumes in a group snapshot, the group snapshot must be created first using the CreateGroupSnapshot API method or the SolidFire Element WebUI. Using groupSnapshotID is optional when cloning multiple volumes.  Note: Cloning multiple volumes is allowed if cluster fullness is at stage 2 or 3. Clones are not created when cluster fullness is at stage 4 or 5. """)
-@click.option('--clonemultiplevolumeparamsvolumeid',
-              type=int,
+@click.option('--volumes',
+              type=str,
               required=True,
-              help="""Required parameter for "volumes" array: volumeID. """)
-@click.option('--clonemultiplevolumeparamsaccess',
-              type=str,
-              required=False,
-              help="""Access settings for the new volume. readOnly: Only read operations are allowed. readWrite: Reads and writes are allowed. locked: No reads or writes are allowed. replicationTarget: Identify a volume as the target volume for a paired set of volumes. If the volume is not paired, the access status is locked.  If unspecified, the access settings of the clone will be the same as the source. """)
-@click.option('--clonemultiplevolumeparamsname',
-              type=str,
-              required=False,
-              help="""New name for the clone. """)
-@click.option('--clonemultiplevolumeparamsnewaccountid',
-              type=int,
-              required=False,
-              help="""Account ID for the new volume. """)
-@click.option('--clonemultiplevolumeparamsnewsize',
-              type=int,
-              required=False,
-              help="""New size Total size of the volume, in bytes. Size is rounded up to the nearest 1MB size. """)
-@click.option('--clonemultiplevolumeparamsattributes',
-              type=dict,
-              required=False,
-              help="""List of Name/Value pairs in JSON object format. """)
+              help="""Provide in json format: Array of Unique ID for each volume to include in the clone with optional parameters. If optional parameters are not specified, the values will be inherited from the source volumes. """)
 @click.option('--access',
               type=str,
               required=False,
@@ -1023,12 +985,7 @@ def getasyncresult(ctx,
               help="""New account ID for the volumes if not overridden by information passed in the volumes array. """)
 @pass_context
 def clonemultiple(ctx,
-           clonemultiplevolumeparamsvolumeid,
-           clonemultiplevolumeparamsaccess = None,
-           clonemultiplevolumeparamsname = None,
-           clonemultiplevolumeparamsnewaccountid = None,
-           clonemultiplevolumeparamsnewsize = None,
-           clonemultiplevolumeparamsattributes = None,
+           volumes,
            access = None,
            groupsnapshotid = None,
            newaccountid = None):
@@ -1041,20 +998,14 @@ def clonemultiple(ctx,
          exit()
 
 
-
-    volumes = None
-    if(volumes is not None or access is not None or groupsnapshotid is not None or newaccountid is not None or False):
-        kwargsDict = dict()
-        kwargsDict["volume_id"] = clonemultiplevolumeparamsvolumeid
-        kwargsDict["access"] = clonemultiplevolumeparamsaccess
-        kwargsDict["name"] = clonemultiplevolumeparamsname
-        kwargsDict["new_account_id"] = clonemultiplevolumeparamsnewaccountid
-        kwargsDict["new_size"] = clonemultiplevolumeparamsnewsize
-        kwargsDict["attributes"] = clonemultiplevolumeparamsattributes
-
-        volumes = CloneMultipleVolumeParams(**kwargsDict)
-
-    volumes = parser.parse_array(volumes)
+    if(volumes is not None):
+        try:
+            kwargsDict = simplejson.loads(volumes)
+        except Exception as e:
+            ctx.logger.error(e.__str__())
+            exit(1) 
+        volumes = [CloneMultipleVolumeParams(**argsOfInterest) for argsOfInterest in kwargsDict]
+    
 
     ctx.logger.info("""volumes = """+str(volumes)+""";"""+"""access = """+str(access)+""";"""+"""groupsnapshotid = """+str(groupsnapshotid)+""";"""+"""newaccountid = """+str(newaccountid)+""";"""+"")
     try:
@@ -1070,7 +1021,82 @@ def clonemultiple(ctx,
 
 
 
-@cli.command('listactive', short_help="""ListActiveVolumes is used to return the list of active volumes currently in the system. The list of volumes is returned sorted in VolumeID order and can be returned in multiple parts (pages). """)
+@cli.command('setdefaultqos', short_help="""SetDefaultQoS enables you to configure the default Quality of Service (QoS) values (measured in inputs and outputs per second, or IOPS) for all volumes not yet created. """)
+@click.option('--miniops',
+              type=int,
+              required=False,
+              help="""The minimum number of sustained IOPS that are provided by the cluster to a volume. """)
+@click.option('--maxiops',
+              type=int,
+              required=False,
+              help="""The maximum number of sustained IOPS that are provided by the cluster to a volume. """)
+@click.option('--burstiops',
+              type=int,
+              required=False,
+              help="""The maximum number of IOPS allowed in a short burst scenario. """)
+@pass_context
+def setdefaultqos(ctx,
+           miniops = None,
+           maxiops = None,
+           burstiops = None):
+    """SetDefaultQoS enables you to configure the default Quality of Service (QoS) values (measured in inputs and outputs per second, or IOPS) for all volumes not yet created."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""miniops = """+str(miniops)+""";"""+"""maxiops = """+str(maxiops)+""";"""+"""burstiops = """+str(burstiops)+""";"""+"")
+    try:
+        _SetDefaultQoSResult = ctx.element.set_default_qos(min_iops=miniops, max_iops=maxiops, burst_iops=burstiops)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_SetDefaultQoSResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('getstats', short_help="""GetVolumeStats is used to retrieve high-level activity measurements for a single volume. Values are cumulative from the creation of the volume. """)
+@click.option('--volumeid',
+              type=int,
+              required=True,
+              help="""Specifies the volume for which statistics is gathered. """)
+@pass_context
+def getstats(ctx,
+           volumeid):
+    """GetVolumeStats is used to retrieve high-level activity measurements for a single volume."""
+    """Values are cumulative from the creation of the volume."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
+    try:
+        _GetVolumeStatsResult = ctx.element.get_volume_stats(volume_id=volumeid)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_GetVolumeStatsResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('listforaccount', short_help="""ListVolumesForAccount returns the list of active AND (pending) deleted volumes for an account. """)
+@click.option('--accountid',
+              type=int,
+              required=True,
+              help="""The ID of the account to list the volumes for. """)
 @click.option('--startvolumeid',
               type=int,
               required=False,
@@ -1080,20 +1106,21 @@ def clonemultiple(ctx,
               required=False,
               help="""The maximum number of volumes to return from the API. """)
 @pass_context
-def listactive(ctx,
+def listforaccount(ctx,
+           accountid,
            startvolumeid = None,
            limit = None):
-    """ListActiveVolumes is used to return the list of active volumes currently in the system."""
-    """The list of volumes is returned sorted in VolumeID order and can be returned in multiple parts (pages)."""
+    """ListVolumesForAccount returns the list of active AND (pending) deleted volumes for an account."""
     if ctx.element is None:
          ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
          exit()
 
 
+    
 
-    ctx.logger.info("""startvolumeid = """+str(startvolumeid)+""";"""+"""limit = """+str(limit)+""";"""+"")
+    ctx.logger.info("""accountid = """+str(accountid)+""";"""+"""startvolumeid = """+str(startvolumeid)+""";"""+"""limit = """+str(limit)+""";"""+"")
     try:
-        _ListActiveVolumesResult = ctx.element.list_active_volumes(start_volume_id=startvolumeid, limit=limit)
+        _ListVolumesForAccountResult = ctx.element.list_volumes_for_account(account_id=accountid, start_volume_id=startvolumeid, limit=limit)
     except common.ApiServerError as e:
         ctx.logger.error(e.message)
         exit()
@@ -1101,7 +1128,62 @@ def listactive(ctx,
         ctx.logger.error(e.__str__())
         exit()
 
-    cli_utils.print_result(_ListActiveVolumesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+    cli_utils.print_result(_ListVolumesForAccountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('getcount', short_help="""GetVolumeCount enables you to retrieve the number of volumes currently in the system. """)
+@pass_context
+def getcount(ctx):
+    """GetVolumeCount enables you to retrieve the number of volumes currently in the system."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("")
+    try:
+        _GetVolumeCountResult = ctx.element.get_volume_count()
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_GetVolumeCountResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
+
+
+
+@cli.command('cancelgroupclone', short_help="""CancelGroupClone enables you to stop an ongoing CloneMultipleVolumes process for a group of clones. When you cancel a group clone operation, the system completes and removes the operation's associated asyncHandle. This method does not return anything. """)
+@click.option('--groupcloneid',
+              type=int,
+              required=True,
+              help="""cloneID for the ongoing clone process. """)
+@pass_context
+def cancelgroupclone(ctx,
+           groupcloneid):
+    """CancelGroupClone enables you to stop an ongoing CloneMultipleVolumes process for a group of clones. When you cancel a group clone operation, the system completes and removes the operation&#x27;s associated asyncHandle. This method does not return anything."""
+    if ctx.element is None:
+         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
+         exit()
+
+
+    
+
+    ctx.logger.info("""groupcloneid = """+str(groupcloneid)+""";"""+"")
+    try:
+        _CancelGroupCloneResult = ctx.element.cancel_group_clone(group_clone_id=groupcloneid)
+    except common.ApiServerError as e:
+        ctx.logger.error(e.message)
+        exit()
+    except BaseException as e:
+        ctx.logger.error(e.__str__())
+        exit()
+
+    cli_utils.print_result(_CancelGroupCloneResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 
 
 
@@ -1133,6 +1215,7 @@ def delete(ctx,
          exit()
 
 
+    
 
     ctx.logger.info("""volumeid = """+str(volumeid)+""";"""+"")
     try:
@@ -1145,91 +1228,4 @@ def delete(ctx,
         exit()
 
     cli_utils.print_result(_DeleteVolumeResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('getdefaultqos', short_help="""GetDefaultQoS is used to retrieve the default QoS values that are set for a volume if QoS is not supplied. """)
-@pass_context
-def getdefaultqos(ctx):
-    """GetDefaultQoS is used to retrieve the default QoS values that are set for a volume if QoS is not supplied."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _VolumeQOS = ctx.element.get_default_qos()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_VolumeQOS, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('listdeleted', short_help="""ListDeletedVolumes is used to return the entire list of volumes that have been marked for deletion and is purged from the system. """)
-@pass_context
-def listdeleted(ctx):
-    """ListDeletedVolumes is used to return the entire list of volumes that have been marked for deletion and is purged from the system."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("")
-    try:
-        _ListDeletedVolumesResult = ctx.element.list_deleted_volumes()
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_ListDeletedVolumesResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
-
-
-
-@cli.command('setdefaultqos', short_help="""SetDefaultQoS enables you to configure the default Quality of Service (QoS) values (measured in inputs and outputs per second, or IOPS) for all volumes not yet created. """)
-@click.option('--miniops',
-              type=int,
-              required=False,
-              help="""The minimum number of sustained IOPS that are provided by the cluster to a volume. """)
-@click.option('--maxiops',
-              type=int,
-              required=False,
-              help="""The maximum number of sustained IOPS that are provided by the cluster to a volume. """)
-@click.option('--burstiops',
-              type=int,
-              required=False,
-              help="""The maximum number of IOPS allowed in a short burst scenario. """)
-@pass_context
-def setdefaultqos(ctx,
-           miniops = None,
-           maxiops = None,
-           burstiops = None):
-    """SetDefaultQoS enables you to configure the default Quality of Service (QoS) values (measured in inputs and outputs per second, or IOPS) for all volumes not yet created."""
-    if ctx.element is None:
-         ctx.logger.error("You must establish at least one connection and specify which you intend to use.")
-         exit()
-
-
-
-    ctx.logger.info("""miniops = """+str(miniops)+""";"""+"""maxiops = """+str(maxiops)+""";"""+"""burstiops = """+str(burstiops)+""";"""+"")
-    try:
-        _SetDefaultQoSResult = ctx.element.set_default_qos(min_iops=miniops, max_iops=maxiops, burst_iops=burstiops)
-    except common.ApiServerError as e:
-        ctx.logger.error(e.message)
-        exit()
-    except BaseException as e:
-        ctx.logger.error(e.__str__())
-        exit()
-
-    cli_utils.print_result(_SetDefaultQoSResult, ctx.logger, as_json=ctx.json, as_pickle=ctx.pickle, depth=ctx.depth, filter_tree=ctx.filter_tree)
 

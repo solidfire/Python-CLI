@@ -51,8 +51,9 @@ def invoke(ctx,
             kwargsDict = simplejson.loads(parameters)
         except Exception as e:
             ctx.logger.error(e.__str__())
-            exit(1)
+            exit(1) 
         parameters = dict(**kwargsDict)
+    
 
     ctx.logger.info("""method = """+str(method)+""";"""+"""parameters = """+str(parameters)+""";"""+"")
     try:
