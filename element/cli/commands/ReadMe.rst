@@ -3017,19 +3017,7 @@ Options:
   LDAP Commands
   ---------------------------------------------------------------
     |-----------------------------
-    |testldapauthentication
-    |  Description:
-    |    The TestLdapAuthentication is used to verify the currently enabled LDAP authentication configuration settings are correct. If the configuration settings are correct, the API call returns a list of the groups the tested user is a member of.
-    |
-    |  Options:
-    |     --username
-    |        The username to be tested.
-    |     --password
-    |        The password for the username to be tester.
-    |     --ldapconfiguration
-    |        An ldapConfiguration object to be tested. If this parameter is provided, the API call will test the provided configuration even if LDAP authentication is currently disabled.
-    |-----------------------------
-    |addldapclusteradmin
+    |addclusteradmin
     |  Description:
     |    AddLdapClusterAdmin is used to add a new LDAP Cluster Admin. An LDAP Cluster Admin can be used to manage the cluster via the API and management tools. LDAP Cluster Admins are completely separate and unrelated to standard tenant accounts.
     |    
@@ -3045,13 +3033,31 @@ Options:
     |     --attributes
     |        List of Name/Value pairs in JSON object format.
     |-----------------------------
-    |disableldapauthentication
+    |getconfiguration
+    |  Description:
+    |    The GetLdapConfiguration is used to get the LDAP configuration currently active on the cluster.
+    |
+    |  Options:
+    |-----------------------------
+    |testauthentication
+    |  Description:
+    |    The TestLdapAuthentication is used to verify the currently enabled LDAP authentication configuration settings are correct. If the configuration settings are correct, the API call returns a list of the groups the tested user is a member of.
+    |
+    |  Options:
+    |     --username
+    |        The username to be tested.
+    |     --password
+    |        The password for the username to be tester.
+    |     --ldapconfiguration
+    |        An ldapConfiguration object to be tested. If this parameter is provided, the API call will test the provided configuration even if LDAP authentication is currently disabled.
+    |-----------------------------
+    |disableauthentication
     |  Description:
     |    The DisableLdapAuthentication method is used disable LDAP authentication and remove all LDAP configuration settings. This call will not remove any configured cluster admin accounts (user or group). However, those cluster admin accounts will no longer be able to log in.
     |
     |  Options:
     |-----------------------------
-    |enableldapauthentication
+    |enableauthentication
     |  Description:
     |    The EnableLdapAuthentication method is used to configure an LDAP server connection to use for LDAP authentication to a SolidFire cluster. Users that are members on the LDAP server can then log in to a SolidFire storage system using their LDAP authentication userid and password.
     |
@@ -3092,12 +3098,6 @@ Options:
     |        The LDAP filter to use.
     |        The string should have the placeholder text "%USERNAME%" which will be replaced with the username of the authenticating user.
     |        Example: (&(objectClass=person) (sAMAccountName=%USERNAME%)) will use the sAMAccountName field in Active Directory to match the nusername entered at cluster login.
-    |-----------------------------
-    |getldapconfiguration
-    |  Description:
-    |    The GetLdapConfiguration is used to get the LDAP configuration currently active on the cluster.
-    |
-    |  Options:
     |        
   ---------------------------------------------------------------
   BackupTarget Commands
