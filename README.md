@@ -36,7 +36,7 @@ Best way to install is from source and using venv:
 5. `pip install -e .`
 6.  Modify `sfvars.env` appropriately
 7. `source sfvars.env`
-8. `sfcli
+8. `sfcli`
 
 Command-Line Usage
 ------------------
@@ -59,7 +59,7 @@ Help/Documentation for using the shell is also available by running
 
     Options:
       -m, --mvip TEXT            SolidFire MVIP
-      -l, --login TEXT           SolidFire Cluster login
+      -l, --login TEXT           SolidFire cluster login
       -p, --password TEXT        SolidFire cluster password
       --format [table|raw|json]  Output format
       -c, --conf PATH            Config file location
