@@ -25,7 +25,8 @@ def cli(ctx):
 @click.option('--mvip', '-m',
               default=None,
               help="SolidFire MVIP",
-              required=False)
+              required=False, # #We should be prompting on this too if the user does not enter this field
+              prompt=True) #TODO
 @click.option('--username', '-u',
               default=None,
               help="SolidFire cluster username",
@@ -41,8 +42,8 @@ def cli(ctx):
 @click.option('--name', '-n',
               default = None,
               help="The name you want to associate with the connection'.",
-              required=True,
-              prompt=True)
+              required=False, #TODO false only because it can be set from the cluster itself.
+              prompt=False)
 @click.option('--port', '-q',
               default = None,
               help="The port you wish to connect on",
@@ -68,6 +69,7 @@ def push(ctx, mvip, username, password, version, port, name, verifyssl):
 
     if ctx.mvip is None and mvip is None:
         ctx.logger.error("Please provide the mvip. It is a required parameter.")
+        exit(1) #TODO #THIS SHOULD NEVER BE HIT
 
     if ctx.mvip is None:
         ctx.mvip = mvip
@@ -84,9 +86,16 @@ def push(ctx, mvip, username, password, version, port, name, verifyssl):
     # Verify that the connection exists or get the extra info.
     cli_utils.establish_connection(ctx)
 
+    if name is None:
+        #if cluster
+            name = (cli_utils.Element.get_cluster_info(ctx.element).cluster_info.name)
+        #else if node
+            #print(cli_utils.Element.get_config(ctx.element))
+
     connections = cli_utils.get_connections(ctx)
+
     # First, ensure that no other connections have the same name:
-    sameName = [connection for connection in connections if connection["name"]==name]
+    sameName = [connection for connection in connections if connection["name"]==name] #this is one hell of a line
     if sameName != []:
         ctx.logger.error("A connection with that name already exists. Please try another.")
         exit(1)
@@ -94,6 +103,10 @@ def push(ctx, mvip, username, password, version, port, name, verifyssl):
     if(ctx.username is not None and ctx.password is not None):
         ctx.username = cli_utils.encrypt(ctx.username)
         ctx.password = cli_utils.encrypt(ctx.password)
+    #Maybe prompt the user instead or erroring out?
+    else:
+        ctx.logger.error("You must enter and username AND password.") #TODO
+        exit(1)
 
     connections = connections + [{'mvip': ctx.mvip,
                                   'username': "b'"+ctx.username.decode('utf-8')+"'",
@@ -101,7 +114,7 @@ def push(ctx, mvip, username, password, version, port, name, verifyssl):
                                   'port': ctx.port,
                                   'url': 'https://%s:%s' % (ctx.mvip, ctx.port),
                                   'version': ctx.version,
-                                  'name': name,
+                                  'name': name, #TODO using name? and not ctx.name? seems inconsistent but name is used all other spots too.
                                   'verifyssl': verifyssl}]
     cli_utils.write_connections(ctx, connections)
 
